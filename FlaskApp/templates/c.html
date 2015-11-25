@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html>
+<html ng-app> 
+
+<head>
+   <title>Learning Angular Js.</title>
+</head>
+
+<script>
+	console.log('{{ datas|safe|angular }}');
+	console.log(' ')
+        console.log ({{ datas|tojson|safe }});
+	console.log(' ')
+	console.log( {{ datas|safe }});
+
+function SimpleController($scope) {
+	$scope.customers = {{ datas | safe  }};
+}
+
+
+</script>
+
+<body ng-controller="SimpleController">
+   <div>
+	<ul>
+		<li ng-repeat="data in customers"> Hi {{ data.id  | angular }} {{ data.Title | angular }}</li> 
+		<li ng-repeat="data in customers"> Hi {{ 'data.Title' + ' ' +  'data.id'  | angular }}</li> 
+	</ul>
+   </div>
+
+   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.min.js"></script>
+   <script src="/static/js/angular-route.min.js"></script>
+
+   <script src="/static/js/app1.js"></script>
+
+</body>
+</html>
+~

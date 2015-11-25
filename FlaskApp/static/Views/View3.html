@@ -1,0 +1,43 @@
+﻿<div class="container-fluid">
+  <h2>Hello and Welcome to View 3</h2> City:
+  <br />
+  <input type="text" class="form-control" data-ng-model="city" /> {{city}}
+  <br />
+  <ul>
+    <li data-ng-repeat="cust in customers1">
+      {{ cust.id | uppercase }} - {{ cust.Title | lowercase }}
+    </li>
+  </ul>
+
+  <br />
+  <a href="#/view1">View 1</a>
+  <a href="#/view2">View 2</a>
+  <a class="btn btn-default" href="#/view2" role="button">View2</a>
+  <a class="btn btn-primary" href="#/view4" role="button">View4</a>
+  <br />
+  <br />
+  <div class="row">
+    <div class="col-md-4">
+<h3>Line 1</h3>
+      <canvas id="bar1" class="chart chart-bar" chart-data="data1" chart-labels="labels1">
+      </canvas>
+
+    </div>
+
+    <div class="col-md-4">
+<h3>Line 2</h3>
+
+      <canvas id="bar2" class="chart chart-bar" chart-data="data2" chart-labels="labels2">
+      </canvas>
+
+    </div>
+    <div class="col-md-4">
+<h3>Line 3</h3>
+      <canvas id="line1" class="chart chart-line" chart-data="data3" chart-labels="labels3">
+      </canvas>
+    </div>
+
+  </div>
+
+
+</div>

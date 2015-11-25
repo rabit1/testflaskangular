@@ -1,0 +1,159 @@
+I do (for basically the reason Badziew says) - PHP actually runs faster than any other configuration that I've tried, so it works quite well. However... it took me a while to cobble everything together since there there weren't any good instructions (uWSGI's documentation is a mess), and I can't remember everything that I did, so these might also be truly awful instructions. Hopefully it points you in a decent direction.
+
+I'm running Debian for this. I installed nginx-full, libphp5-embed and php5-dev through apt. I believe I also initially installed uWSGI through apt, but it was such an old version that I uninstalled it, except for the init.d script that it does provide which is a decent start. I run uWSGI in Emperor mode, and I believe I had to edit the init.d script to run it that way, so I've uploaded my script just in case+.
+
+Download and install uWSGI from source - I wrote a bash script that does this for me, which I just run (using sudo) out of my home directory:
+
+echo "*** uWSGI installer ***"
+echo "downloading latest uWSGI tarball..."
+rm -rf uwsgi_latest_from_installer*
+curl -o uwsgi_latest_from_installer.tar.gz http://projects.unbit.it/downloads/uwsgi-latest.tar.gz
+mkdir uwsgi_latest_from_installer
+tar zvxC uwsgi_latest_from_installer --strip-components=1 -f uwsgi_latest_from_installer.tar.gz
+cd uwsgi_latest_from_installer
+UWSGI_PROFILE=buildconf/package.ini python3 setup.py install
+python3 uwsgiconfig.py --plugin plugins/python core
+python3 uwsgiconfig.py --plugin plugins/php core
+cp -v php_plugin.so /usr/lib/uwsgi/
+cp -v python_plugin.so /usr/lib/uwsgi/
+(I also have a couple lines to build the CGI plugin as well, but I've edited those out.)
+
+/etc/uwsgi/emperor.ini:
+
+[uwsgi]
+emperor = /etc/uwsgi/apps-enabled
+emperor-pidfile = /run/uwsgi/emperor.pid
+daemonize = /var/log/uwsgi/uwsgi-emperor.log
+vassals-inherit = /etc/uwsgi/default.ini
+/etc/uwsgi/default.ini:
+
+[uwsgi]
+ show-config = true
+ vacuum = true
+ uid = www-data
+ gid = www-data
+Then I do the apps-available and apps-enabled folders and linking, just like nginx's sites-available and sites-enabled.
+
+/etc/uwsgi/apps-available/php.ini:
+
+[uwsgi]
+plugins = php
+workers = 10
+cheaper = 2
+socket = /tmp/uwsgi-php.sock
+php-sapi-name = apache
+php-set = date.timezone=America/Los_Angeles
+php-set = allow_url_fopen=Off
+The timezone set is because apt's updating edits php.ini, and PHP complains a lot about the timezone not being set. This way I can keep everybody off my back when I update anything.
+
+For my flask application - I've normally have the script name in here, but I've replaced it with "flaskapp". example.com is obviously also not my website.
+
+[uwsgi]
+vhost = true
+workers = 10
+cheaper = 2
+socket = /tmp/uwsgi-flaskapp.sock
+venv = /var/www/example.com/flaskapp/.venv
+chdir = /var/www/example.com/flaskapp/
+mount = /flaskapp=flaskapp.py
+callable = app
+manage-script-name = true
+As far as nginx, here's what's in my site config:
+
+location ~ \.php$ {
+    try_files $uri =404;
+    include uwsgi_params;
+    uwsgi_modifier1 14;
+    uwsgi_pass unix:///tmp/uwsgi-php.sock;
+    uwsgi_buffering off;
+}
+
+location ~ /flaskapp {
+    include uwsgi_params;
+    uwsgi_pass unix:///tmp/uwsgi-flaskapp.sock;
+    uwsgi_param SCRIPT_NAME /flaskapp;
+}
+You might want to eliminate the line about uwsgi_buffering for php, but I turned it off for a specific app and haven't had any trouble otherwise.
+
+There may be a better way to do all this, but it works for me!
+
+When you update PHP I believe you need to rebuild the PHP module for uWSGI as well - my procedure is to run an apt-get update/upgrade, rebuild and reinstall uWSGI (which doesn't take long at all), and restart uWSGI. Up until uWSGI's restart, the old-versioned PHP vassals are still running, so I don't think you have any downtime. I'm the only one who's really using my server, though, so I'm not too concerned about that.I do (for basically the reason Badziew says) - PHP actually runs faster than any other configuration that I've tried, so it works quite well. However... it took me a while to cobble everything together since there there weren't any good instructions (uWSGI's documentation is a mess), and I can't remember everything that I did, so these might also be truly awful instructions. Hopefully it points you in a decent direction.
+
+I'm running Debian for this. I installed nginx-full, libphp5-embed and php5-dev through apt. I believe I also initially installed uWSGI through apt, but it was such an old version that I uninstalled it, except for the init.d script that it does provide which is a decent start. I run uWSGI in Emperor mode, and I believe I had to edit the init.d script to run it that way, so I've uploaded my script just in case+.
+
+Download and install uWSGI from source - I wrote a bash script that does this for me, which I just run (using sudo) out of my home directory:
+
+echo "*** uWSGI installer ***"
+echo "downloading latest uWSGI tarball..."
+rm -rf uwsgi_latest_from_installer*
+curl -o uwsgi_latest_from_installer.tar.gz http://projects.unbit.it/downloads/uwsgi-latest.tar.gz
+mkdir uwsgi_latest_from_installer
+tar zvxC uwsgi_latest_from_installer --strip-components=1 -f uwsgi_latest_from_installer.tar.gz
+cd uwsgi_latest_from_installer
+UWSGI_PROFILE=buildconf/package.ini python3 setup.py install
+python3 uwsgiconfig.py --plugin plugins/python core
+python3 uwsgiconfig.py --plugin plugins/php core
+cp -v php_plugin.so /usr/lib/uwsgi/
+cp -v python_plugin.so /usr/lib/uwsgi/
+(I also have a couple lines to build the CGI plugin as well, but I've edited those out.)
+
+/etc/uwsgi/emperor.ini:
+
+[uwsgi]
+emperor = /etc/uwsgi/apps-enabled
+emperor-pidfile = /run/uwsgi/emperor.pid
+daemonize = /var/log/uwsgi/uwsgi-emperor.log
+vassals-inherit = /etc/uwsgi/default.ini
+/etc/uwsgi/default.ini:
+
+[uwsgi]
+ show-config = true
+ vacuum = true
+ uid = www-data
+ gid = www-data
+Then I do the apps-available and apps-enabled folders and linking, just like nginx's sites-available and sites-enabled.
+
+/etc/uwsgi/apps-available/php.ini:
+
+[uwsgi]
+plugins = php
+workers = 10
+cheaper = 2
+socket = /tmp/uwsgi-php.sock
+php-sapi-name = apache
+php-set = date.timezone=America/Los_Angeles
+php-set = allow_url_fopen=Off
+The timezone set is because apt's updating edits php.ini, and PHP complains a lot about the timezone not being set. This way I can keep everybody off my back when I update anything.
+
+For my flask application - I've normally have the script name in here, but I've replaced it with "flaskapp". example.com is obviously also not my website.
+
+[uwsgi]
+vhost = true
+workers = 10
+cheaper = 2
+socket = /tmp/uwsgi-flaskapp.sock
+venv = /var/www/example.com/flaskapp/.venv
+chdir = /var/www/example.com/flaskapp/
+mount = /flaskapp=flaskapp.py
+callable = app
+manage-script-name = true
+As far as nginx, here's what's in my site config:
+
+location ~ \.php$ {
+    try_files $uri =404;
+    include uwsgi_params;
+    uwsgi_modifier1 14;
+    uwsgi_pass unix:///tmp/uwsgi-php.sock;
+    uwsgi_buffering off;
+}
+
+location ~ /flaskapp {
+    include uwsgi_params;
+    uwsgi_pass unix:///tmp/uwsgi-flaskapp.sock;
+    uwsgi_param SCRIPT_NAME /flaskapp;
+}
+You might want to eliminate the line about uwsgi_buffering for php, but I turned it off for a specific app and haven't had any trouble otherwise.
+
+There may be a better way to do all this, but it works for me!
+
+When you update PHP I believe you need to rebuild the PHP module for uWSGI as well - my procedure is to run an apt-get update/upgrade, rebuild and reinstall uWSGI (which doesn't take long at all), and restart uWSGI. Up until uWSGI's restart, the old-versioned PHP vassals are still running, so I don't think you have any downtime. I'm the only one who's really using my server, though, so I'm not too concerned about that.:
